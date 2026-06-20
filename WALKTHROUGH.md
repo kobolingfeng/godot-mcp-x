@@ -83,7 +83,14 @@ in the editor.
   reliably write `.import` files, so `load()` returns null at runtime.
 - **One server per port** — run only ONE editor/daemon on 6605 at a time. Multiple
   Godot instances all dial 6605 and the server keeps the last; stale state then
-  looks like a bug. Kill strays first.
+  looks like a bug. Kill strays first. A tool returning the *wrong* scene or
+  `node_count` from `get_game_info` is the fastest sign you're on a stale instance.
+- **Launching the game (Windows)** — start it with PowerShell
+  `Start-Process godot.exe --path <proj>`; launching the GUI exe from a git-bash
+  background job fails with exit 127. Headless `--import` works from any shell.
+- **Driving a *paused* game** — the runtime bridge runs as `PROCESS_MODE_ALWAYS`, so
+  screenshots / inspection / `execute_game_script` keep working while
+  `get_tree().paused` is true (pause menus, frozen-state debugging).
 - **Transient VFX in screenshots** — one-shot effects (~0.5 s) are hard to time via
   async calls; use a persistent effect or `record_frames` to capture them.
 - **Shrink the tool surface** — `godot-x list --mode 2d` (or `minimal/3d/ui/test`)

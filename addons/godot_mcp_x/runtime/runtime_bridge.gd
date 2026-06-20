@@ -23,6 +23,9 @@ var _test_log: Array = []
 
 
 func _ready() -> void:
+	# Keep polling the socket even when the game is paused, so tools can drive /
+	# inspect a paused game (pause menus, frozen-state debugging).
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_handlers = {
 		"get_game_info": _get_game_info,
 		"get_game_scene_tree": _get_game_scene_tree,
