@@ -79,6 +79,19 @@ editor. **Ports 6605-6609** are deliberately distinct from godot-mcp-pro's
 4. Open the editor. The plugin dials the server; tool calls now hit your live
    editor. Optional `GODOT_MCP_X_PORT` env var pins a fixed port.
 
+### One-command client setup
+
+After `npm run build`, register the server into your MCP client(s) automatically —
+no hand-editing config files:
+```bash
+node build/cli.js install --list          # detected clients + their config paths
+node build/cli.js install claude-desktop  # configure one
+node build/cli.js install all             # configure every detected client
+```
+Supported: **Claude Code, Claude Desktop, Cursor, Windsurf, VS Code (Copilot),
+Zed, Codex** — each gets the correct file path + schema, and existing entries are
+preserved. Add `--scope project` (project-local config), `--name`, or `--mode 3d`.
+
 ## CLI (no MCP client needed)
 
 After `npm run build`, drive the editor straight from a shell — handy for scripts
@@ -263,6 +276,9 @@ Preview any mode: `node build/cli.js list --mode 3d`.
 - [x] Multiplayer (`mp` group): MultiplayerSpawner / Synchronizer +
       SceneReplicationConfig scaffolding (undoable) + runtime peer / authority /
       state — verified (config build + undo, server-peer loopback)
+- [x] One-command multi-client install (`godot-x install <client|all>`) for
+      Claude Code/Desktop, Cursor, Windsurf, VS Code, Zed, Codex (correct
+      per-client schema, preserves existing entries)
 
 ## Knowledge base
 

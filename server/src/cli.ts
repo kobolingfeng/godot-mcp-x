@@ -15,6 +15,7 @@ import { GodotConnection } from "./core/connection.js";
 import { allTools, selectTools } from "./tools/groups.js";
 import { runDaemon, daemonHealth, ipcRequest } from "./daemon.js";
 import { runDoctor, runSetup } from "./setup.js";
+import { listClients, installClient, installAll } from "./clients.js";
 
 const argv = process.argv.slice(2);
 
@@ -86,6 +87,26 @@ async function main(): Promise<void> {
   if (first === "setup") {
     const pi = argv.indexOf("--project");
     runSetup(pi >= 0 ? argv[pi + 1] : undefined);
+    return;
+  }
+  if (first === "install" || first === "install-client") {
+    const flag = (f: string): string | undefined => {
+      const i = argv.indexOf(f);
+      return i >= 0 ? argv[i + 1] : undefined;
+    };
+    const cwd = process.cwd();
+    const sub = argv[1] && !argv[1].startsWith("--") ? argv[1] : undefined;
+    if (!sub || sub === "list" || argv.includes("--list")) {
+      console.log("MCP clients (● configured · ○ present · ‧ not found):\n");
+      for (const c of listClients(cwd)) {
+        console.log(`  ${c.configured ? "●" : c.exists ? "○" : "‧"} ${c.id.padEnd(15)} ${c.file}`);
+      }
+      console.log("\nUsage: godot-x install <client|all> [--scope user|project] [--name NAME] [--mode MODE]");
+      return;
+    }
+    const opts = { scope: (flag("--scope") as "user" | "project") ?? "user", name: flag("--name"), mode: flag("--mode"), cwd };
+    const results = sub === "all" ? installAll(opts) : [installClient(sub, opts)];
+    for (const r of results) console.log(`${r.ok ? "✓" : "·"} ${r.id.padEnd(15)} ${r.msg}${r.ok ? "  → " + r.file : ""}`);
     return;
   }
 

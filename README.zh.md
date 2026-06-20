@@ -74,6 +74,18 @@ MCP 服务器只是个轻量 JSON-RPC 代理;真正的性能在于**载荷大小
 4. 打开编辑器。插件会拨号服务器;工具调用即作用于你的实时编辑器。可选
    `GODOT_MCP_X_PORT` 环境变量固定端口。
 
+### 一键配置 MCP 客户端
+
+`npm run build` 后,把服务器**自动注册**进你的 MCP 客户端,无需手改配置文件:
+```bash
+node build/cli.js install --list          # 列出检测到的客户端 + 配置路径
+node build/cli.js install claude-desktop  # 配置某一个
+node build/cli.js install all             # 配置所有检测到的客户端
+```
+支持:**Claude Code、Claude Desktop、Cursor、Windsurf、VS Code(Copilot)、Zed、
+Codex** —— 各用正确的路径 + schema,且**保留已有条目**。可加 `--scope project`
+(项目级配置)、`--name`、`--mode 3d`。
+
 ## CLI(无需 MCP 客户端)
 
 `npm run build` 后,可直接从 shell 驱动编辑器 —— 适合脚本或省 token。与 MCP 服务器
