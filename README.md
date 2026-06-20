@@ -13,7 +13,7 @@ development. Clean-room core + battle-tested command logic, designed from day on
 around the two things that actually matter for an AI agent: **fast, small,
 correct responses** and **comprehensive editor + runtime control**.
 
-> Status: **feature-complete & validated end-to-end** — **163 tools across 27
+> Status: **feature-complete & validated end-to-end** — **168 tools across 28
 > groups**: project, scene, node, script, editor, analysis, resource, filesystem, ui,
 > input map, animation, animation tree, physics, navigation, 3D builders, gridmap,
 > skeleton, shader, particle, audio, tilemap, theme, batch, profiling, export, a
@@ -138,16 +138,16 @@ runtime — use `--import`.
 
 ## Tool modes (shrink context)
 
-The full server registers 163 tools, and the tool list itself costs context. For
+The full server registers 168 tools, and the tool list itself costs context. For
 a focused session, load only the groups you need via `--mode` (or env
 `GODOT_MCP_X_MODE`), plus `--tools` / `--exclude`:
 
 | mode | tools | groups |
 |---|--:|---|
-| `full` (default) | 163 | everything |
+| `full` (default) | 168 | everything |
 | `minimal` | 48 | project, scene, node, script, editor |
-| `3d` | 146 | common + physics, navigation, node3d, shader, particle, audio, animation_tree, gridmap, skeleton |
-| `2d` | 116 | common + physics, tilemap, theme |
+| `3d` | 151 | common + physics, navigation, node3d, shader, particle, audio, animation_tree, gridmap, skeleton, mp |
+| `2d` | 121 | common + physics, tilemap, theme, mp |
 | `ui` | 78 | minimal + resource, theme, batch, runtime, ui |
 | `test` | 72 | minimal + runtime, testing, profiling |
 
@@ -162,7 +162,7 @@ a focused session, load only the groups you need via `--mode` (or env
 Or pick groups explicitly: `--tools project,scene,node,shader` / `--exclude export,profiling`.
 Preview any mode: `node build/cli.js list --mode 3d`.
 
-## Tools (current — 163)
+## Tools (current — 168)
 
 - **project** (9): `get_project_info`, `get_project_settings`,
   `set_project_setting`, `get_filesystem_tree`, `list_autoloads`,
@@ -227,6 +227,11 @@ Preview any mode: `node build/cli.js list --mode 3d`.
   `add_skeleton_modifier`, `setup_look_at_modifier`, `list_skeleton_modifiers`
   — IK & bone constraints via the SkeletonModifier3D system (TwoBoneIK3D,
   FABRIK3D, CCDIK3D, LookAtModifier3D, SpringBoneSimulator3D, …)
+- **mp** (5): `add_multiplayer_spawner`, `add_multiplayer_synchronizer`
+  (editor — build a MultiplayerSpawner + a MultiplayerSynchronizer with its
+  SceneReplicationConfig, undoable), `setup_multiplayer_peer`,
+  `get_multiplayer_info`, `set_game_authority` (runtime) — high-level networking
+  scaffolding + live peer / authority control
 
 ## Roadmap
 
@@ -255,6 +260,9 @@ Preview any mode: `node build/cli.js list --mode 3d`.
       `find_script_references` index, iterative scene traversal (`max_nodes`),
       unified pagination — see BENCHMARK §6 (find-refs ~1.9× faster, bounded
       memory/output on a 7,700-file / 8,000-node stress project)
+- [x] Multiplayer (`mp` group): MultiplayerSpawner / Synchronizer +
+      SceneReplicationConfig scaffolding (undoable) + runtime peer / authority /
+      state — verified (config build + undo, server-peer loopback)
 
 ## Knowledge base
 

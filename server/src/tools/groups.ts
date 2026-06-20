@@ -26,6 +26,7 @@ import { gridmapTools } from "./gridmap.js";
 import { skeletonTools } from "./skeleton.js";
 import { filesystemTools } from "./filesystem.js";
 import { uiTools } from "./ui.js";
+import { mpTools } from "./mp.js";
 
 /** Named tool groups, in canonical order. */
 export const GROUPS: Record<string, ToolDef[]> = {
@@ -56,6 +57,7 @@ export const GROUPS: Record<string, ToolDef[]> = {
   skeleton: skeletonTools,
   filesystem: filesystemTools,
   ui: uiTools,
+  mp: mpTools,
 };
 
 const MINIMAL = ["project", "scene", "node", "script", "editor"];
@@ -68,8 +70,8 @@ const COMMON = [...MINIMAL, "analysis", "resource", "filesystem", "input", "anim
 export const MODES: Record<string, string[]> = {
   full: Object.keys(GROUPS),
   minimal: MINIMAL,
-  "2d": [...COMMON, "physics", "tilemap", "theme"],
-  "3d": [...COMMON, "physics", "navigation", "node3d", "shader", "particle", "audio", "animation_tree", "gridmap", "skeleton"],
+  "2d": [...COMMON, "physics", "tilemap", "theme", "mp"],
+  "3d": [...COMMON, "physics", "navigation", "node3d", "shader", "particle", "audio", "animation_tree", "gridmap", "skeleton", "mp"],
   ui: [...MINIMAL, "resource", "theme", "batch", "runtime", "ui"],
   test: [...MINIMAL, "runtime", "testing", "profiling"],
 };

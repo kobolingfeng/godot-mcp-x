@@ -30,6 +30,7 @@ const MODULES := [
 	preload("res://addons/godot_mcp_x/commands/skeleton_commands.gd"),
 	preload("res://addons/godot_mcp_x/commands/fs_commands.gd"),
 	preload("res://addons/godot_mcp_x/commands/ui_commands.gd"),
+	preload("res://addons/godot_mcp_x/commands/mp_commands.gd"),
 ]
 
 var editor_plugin: EditorPlugin

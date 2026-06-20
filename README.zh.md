@@ -11,7 +11,7 @@
 检验的命令逻辑,从第一天就围绕 AI agent 真正在意的两件事来设计:**又快又小又正确的
 响应**,以及**全面的编辑器 + 运行时控制**。
 
-> 状态:**功能完整、端到端验证** —— **163 个工具 / 27 组**:project、scene、node、
+> 状态:**功能完整、端到端验证** —— **168 个工具 / 28 组**:project、scene、node、
 > script、editor、analysis、resource、filesystem、ui、input map、animation、
 > animation tree、physics、navigation、3D 构建、gridmap、skeleton、shader、particle、
 > audio、tilemap、theme、batch、profiling、export,以及完整的 **runtime**(游戏内
@@ -125,15 +125,15 @@ node build/cli.js stop-daemon
 
 ## 工具模式(压缩上下文)
 
-完整服务器注册 163 个工具,工具列表本身也耗上下文。聚焦会话时,用 `--mode`(或环境
+完整服务器注册 168 个工具,工具列表本身也耗上下文。聚焦会话时,用 `--mode`(或环境
 变量 `GODOT_MCP_X_MODE`)只加载需要的组,另有 `--tools` / `--exclude`:
 
 | 模式 | 工具数 | 组 |
 |---|--:|---|
-| `full`(默认) | 163 | 全部 |
+| `full`(默认) | 168 | 全部 |
 | `minimal` | 48 | project、scene、node、script、editor |
-| `3d` | 146 | common + physics、navigation、node3d、shader、particle、audio、animation_tree、gridmap、skeleton |
-| `2d` | 116 | common + physics、tilemap、theme |
+| `3d` | 151 | common + physics、navigation、node3d、shader、particle、audio、animation_tree、gridmap、skeleton、mp |
+| `2d` | 121 | common + physics、tilemap、theme、mp |
 | `ui` | 78 | minimal + resource、theme、batch、runtime、ui |
 | `test` | 72 | minimal + runtime、testing、profiling |
 
@@ -148,7 +148,7 @@ node build/cli.js stop-daemon
 或显式选组:`--tools project,scene,node,shader` / `--exclude export,profiling`。
 预览任意模式:`node build/cli.js list --mode 3d`。
 
-## 工具一览(当前 163;工具名为代码标识,保持英文)
+## 工具一览(当前 168;工具名为代码标识,保持英文)
 
 - **project**(9):`get_project_info`、`get_project_settings`、`set_project_setting`、`get_filesystem_tree`、`list_autoloads`、`add_autoload`、`remove_autoload`、`uid_to_path`、`path_to_uid`
 - **scene**(7):`get_scene_tree`、`get_current_scene`、`open_scene`、`save_scene`、`create_scene`、`get_scene_file_content`、`instance_scene`
@@ -178,6 +178,7 @@ node build/cli.js stop-daemon
 - **testing**(8,运行时):`assert_property`、`assert_node_exists`、`assert_screen_text`、`wait_for_node`、`monitor_property`、`record_frames`、`run_test_scenario`、`get_test_report` —— 在运行中的游戏里做自动化玩法回归(通过/失败报告;故意失败已验证)
 - **gridmap**(6):`add_gridmap`、`gridmap_set_cell`、`gridmap_get_cell`、`gridmap_clear`、`gridmap_get_used_cells`、`gridmap_get_info`
 - **skeleton**(9):`get_skeleton_info`、`list_bones`、`add_bone`、`set_bone_pose`、`reset_bone_poses`、`add_bone_attachment`、`add_skeleton_modifier`、`setup_look_at_modifier`、`list_skeleton_modifiers` —— 通过 SkeletonModifier3D 系统实现 IK 与骨骼约束(TwoBoneIK3D、FABRIK3D、CCDIK3D、LookAtModifier3D、SpringBoneSimulator3D…)
+- **mp**(5):`add_multiplayer_spawner`、`add_multiplayer_synchronizer`(编辑器——搭 MultiplayerSpawner + 带 SceneReplicationConfig 的 MultiplayerSynchronizer,可撤销)、`setup_multiplayer_peer`、`get_multiplayer_info`、`set_game_authority`(运行时)—— 高层网络脚手架 + 实时对等体/权限控制
 
 > 另有 `doctor` / `setup`(项目自检 + 一键装插件/autoload)、`daemon` / `status` /
 > `stop-daemon` 等 CLI 子命令,见上文与 [WALKTHROUGH.md](WALKTHROUGH.md)、

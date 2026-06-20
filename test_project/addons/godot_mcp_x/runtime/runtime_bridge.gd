@@ -31,6 +31,9 @@ func _ready() -> void:
 		"execute_game_script": _execute_game_script,
 		"get_game_screenshot": _get_game_screenshot,
 		"reload_game_script": _reload_game_script,
+		"setup_multiplayer_peer": _setup_multiplayer_peer,
+		"get_multiplayer_info": _get_multiplayer_info,
+		"set_game_authority": _set_game_authority,
 		"simulate_action": _simulate_action,
 		"simulate_key": _simulate_key,
 		"get_autoload": _get_autoload,
@@ -459,6 +462,42 @@ func _reload_game_script(params: Dictionary) -> Dictionary:
 	if err != OK:
 		return _fail("reload failed (error %d)" % err)
 	return _ok({"reloaded": path})
+
+
+func _setup_multiplayer_peer(params: Dictionary) -> Dictionary:
+	var mode := str(params.get("mode", "server"))
+	var port := int(params.get("port", 7777))
+	var peer := ENetMultiplayerPeer.new()
+	var err := OK
+	if mode == "client":
+		err = peer.create_client(str(params.get("host", "127.0.0.1")), port)
+	else:
+		err = peer.create_server(port, int(params.get("max_clients", 32)))
+	if err != OK:
+		return _fail("create_%s failed (error %d)" % [mode, err])
+	multiplayer.multiplayer_peer = peer
+	return _ok({"mode": mode, "port": port, "is_server": multiplayer.is_server(), "unique_id": multiplayer.get_unique_id()})
+
+
+func _get_multiplayer_info(_params: Dictionary) -> Dictionary:
+	var has_peer := multiplayer.multiplayer_peer != null
+	var info := {"has_peer": has_peer}
+	if has_peer:
+		info["is_server"] = multiplayer.is_server()
+		info["unique_id"] = multiplayer.get_unique_id()
+		var peers: Array = []
+		for p in multiplayer.get_peers():
+			peers.append(p)
+		info["peers"] = peers
+	return _ok(info)
+
+
+func _set_game_authority(params: Dictionary) -> Dictionary:
+	var node := _resolve(str(params.get("path", "")))
+	if node == null:
+		return _fail("Node not found: %s" % str(params.get("path", "")))
+	node.set_multiplayer_authority(int(params.get("id", 1)), bool(params.get("recursive", true)))
+	return _ok({"path": str(params.get("path", "")), "authority": node.get_multiplayer_authority()})
 
 
 func _get_autoload(params: Dictionary) -> Dictionary:

@@ -94,3 +94,16 @@ godot-x analyze_scene_complexity --max_nodes 5000
 # huge files: page line windows (never the whole file)
 godot-x read_script --path res://big.gd --offset 0 --limit 400   # then follow next_offset
 ```
+
+## Multiplayer (high-level networking)
+Scaffold replication in the editor, then drive peers at runtime:
+```
+# editor: replicate a player's transform + a spawner that can spawn it
+godot-x add_multiplayer_synchronizer --path Player --properties '["position","rotation"]'
+godot-x add_multiplayer_spawner --parent_path . --scenes '["res://player.tscn"]'
+
+# runtime (after play_scene): host, inspect, assign authority
+godot-x setup_multiplayer_peer --mode server --port 7777
+godot-x get_multiplayer_info
+godot-x set_game_authority --path Player --id 1
+```
