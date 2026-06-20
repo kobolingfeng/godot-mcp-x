@@ -1,5 +1,7 @@
 # godot-mcp-x
 
+**English** · [简体中文](README.zh.md)
+
 > **❤️ Support / 赞赏支持** — if godot-mcp-x saves you time, a small tip is hugely
 > appreciated 🙏 如果这个项目帮到你,欢迎赞赏支持,非常感谢!
 > **PayPal**: [paypal.me/koboling](https://paypal.me/koboling) · **WeChat 微信赞赏** ↓
