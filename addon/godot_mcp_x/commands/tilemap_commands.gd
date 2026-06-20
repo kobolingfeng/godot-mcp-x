@@ -107,15 +107,20 @@ func _used_cells(params: Dictionary) -> Dictionary:
 	var layer := _layer(req_str(params, "path"))
 	if layer == null:
 		return fail("TileMapLayer not found")
+	var used := layer.get_used_cells()
+	var total := used.size()
+	var offset := clampi(opt_int(params, "offset", 0), 0, total)
+	var limit := maxi(1, opt_int(params, "limit", 500))
+	var end := mini(offset + limit, total)
 	var cells: Array = []
-	for c in layer.get_used_cells():
+	for i in range(offset, end):
+		var c: Vector2i = used[i]
 		cells.append([c.x, c.y])
-	var offset := opt_int(params, "offset", 0)
-	var limit := opt_int(params, "limit", 500)
 	return success({
-		"total": cells.size(),
+		"total": total,
 		"offset": offset,
 		"limit": limit,
-		"has_more": offset + limit < cells.size(),
-		"cells": cells.slice(offset, offset + limit),
+		"has_more": end < total,
+		"next_offset": end if end < total else null,
+		"cells": cells,
 	})

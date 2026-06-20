@@ -242,21 +242,12 @@ func _find_nodes(params: Dictionary) -> Dictionary:
 	var root := edited_root()
 	if root == null:
 		return fail("No scene is currently open")
-	var matches: Array = []
-	_collect(root, root, opt_str(params, "type", ""), opt_str(params, "pattern", ""), opt_str(params, "group", ""), matches)
-	var total := matches.size()
-	var offset := opt_int(params, "offset", 0)
-	var limit := opt_int(params, "limit", 200)
-	return success({
-		"total": total,
-		"offset": offset,
-		"limit": limit,
-		"has_more": offset + limit < total,
-		"nodes": matches.slice(offset, offset + limit),
-	})
+	var page := page_state(params, 200)
+	_collect(root, root, opt_str(params, "type", ""), opt_str(params, "pattern", ""), opt_str(params, "group", ""), page)
+	return success(page_result(page, "nodes"))
 
 
-func _collect(root: Node, node: Node, type: String, pattern: String, group: String, acc: Array) -> void:
+func _collect(root: Node, node: Node, type: String, pattern: String, group: String, page: Dictionary) -> void:
 	var ok := true
 	if type != "" and not node.is_class(type):
 		ok = false
@@ -265,13 +256,13 @@ func _collect(root: Node, node: Node, type: String, pattern: String, group: Stri
 	if ok and group != "" and not node.is_in_group(group):
 		ok = false
 	if ok:
-		acc.append({
+		page_add(page, {
 			"path": "." if node == root else String(root.get_path_to(node)),
 			"type": node.get_class(),
 			"name": String(node.name),
 		})
 	for c in node.get_children():
-		_collect(root, c, type, pattern, group, acc)
+		_collect(root, c, type, pattern, group, page)
 
 
 func _call_method(params: Dictionary) -> Dictionary:

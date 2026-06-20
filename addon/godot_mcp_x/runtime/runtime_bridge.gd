@@ -194,11 +194,42 @@ func _node_paths() -> Array:
 	return paths
 
 
+func _node_path_suggestions(path: String) -> Array:
+	var root := _scene_root()
+	if root == null:
+		return []
+	var best: Array = []
+	_collect_path_suggestions(root, root, path.to_lower(), best)
+	var out: Array = []
+	for item in best:
+		out.append(item.get("n", ""))
+	return out
+
+
 func _collect_paths(root: Node, node: Node, acc: Array) -> void:
 	if node != root:
 		acc.append(String(root.get_path_to(node)))
 	for c in node.get_children():
 		_collect_paths(root, c, acc)
+
+
+func _collect_path_suggestions(root: Node, node: Node, target: String, best: Array) -> void:
+	if node != root:
+		_add_suggestion(best, target, String(root.get_path_to(node)))
+	for c in node.get_children():
+		_collect_path_suggestions(root, c, target, best)
+
+
+func _add_suggestion(best: Array, target: String, candidate: String) -> void:
+	var score := target.similarity(candidate.to_lower())
+	if score < 0.45:
+		return
+	var at := 0
+	while at < best.size() and float(best[at].get("s", 0.0)) >= score:
+		at += 1
+	best.insert(at, {"n": candidate, "s": score})
+	if best.size() > 3:
+		best.resize(3)
 
 
 # ---------- handlers ----------
@@ -222,6 +253,8 @@ func _get_game_scene_tree(params: Dictionary) -> Dictionary:
 		int(params.get("max_depth", -1)),
 		bool(params.get("include_internal", false)),
 		bool(params.get("include_properties", false)),
+		str(params.get("type_filter", "")),
+		int(params.get("max_nodes", 0)),
 	)
 	return _ok({"scene": root.scene_file_path, "tree": tree})
 
@@ -229,7 +262,7 @@ func _get_game_scene_tree(params: Dictionary) -> Dictionary:
 func _get_game_node_properties(params: Dictionary) -> Dictionary:
 	var node := _resolve(str(params.get("path", "")))
 	if node == null:
-		return _fail("Node not found: %s" % params.get("path", ""), -32000, {"suggestions": _suggest(str(params.get("path", "")), _node_paths())})
+		return _fail("Node not found: %s" % params.get("path", ""), -32000, {"suggestions": _node_path_suggestions(str(params.get("path", "")))})
 	var props: Dictionary
 	if params.has("names") and params["names"] is Array:
 		props = Serialize.picked_properties(node, params["names"])
@@ -243,7 +276,7 @@ func _get_game_node_properties(params: Dictionary) -> Dictionary:
 func _set_game_node_property(params: Dictionary) -> Dictionary:
 	var node := _resolve(str(params.get("path", "")))
 	if node == null:
-		return _fail("Node not found: %s" % params.get("path", ""), -32000, {"suggestions": _suggest(str(params.get("path", "")), _node_paths())})
+		return _fail("Node not found: %s" % params.get("path", ""), -32000, {"suggestions": _node_path_suggestions(str(params.get("path", "")))})
 	var prop := str(params.get("property", ""))
 	if prop == "":
 		return _fail("'property' is required")
@@ -439,7 +472,7 @@ func _get_autoload(params: Dictionary) -> Dictionary:
 func _call_game_method(params: Dictionary) -> Dictionary:
 	var node := _resolve(str(params.get("path", "")))
 	if node == null:
-		return _fail("Node not found: %s" % params.get("path", ""), -32000, {"suggestions": _suggest(str(params.get("path", "")), _node_paths())})
+		return _fail("Node not found: %s" % params.get("path", ""), -32000, {"suggestions": _node_path_suggestions(str(params.get("path", "")))})
 	var method := str(params.get("method", ""))
 	if not node.has_method(method):
 		var mnames: Array = []

@@ -92,23 +92,14 @@ func _get_filesystem_tree(params: Dictionary) -> Dictionary:
 	var root := opt_str(params, "path", "res://")
 	var filter := opt_str(params, "filter", "")
 	var max_depth := opt_int(params, "max_depth", 8)
-	var offset := opt_int(params, "offset", 0)
-	var limit := opt_int(params, "limit", 500)
 	var files: Array = []
 	_walk(root, 0, max_depth, filter, files)
-	files.sort()
-	var total := files.size()
-	return success({
-		"root": root,
-		"total": total,
-		"offset": offset,
-		"limit": limit,
-		"has_more": offset + limit < total,
-		"files": files.slice(offset, offset + limit),
-	})
+	var result := sorted_items_result(files, params, 500, "files")
+	result["root"] = root
+	return success(result)
 
 
-func _walk(dir_path: String, depth: int, max_depth: int, filter: String, acc: Array) -> void:
+func _walk(dir_path: String, depth: int, max_depth: int, filter: String, files: Array) -> void:
 	if depth > max_depth:
 		return
 	var d := DirAccess.open(dir_path)
@@ -123,10 +114,10 @@ func _walk(dir_path: String, depth: int, max_depth: int, filter: String, acc: Ar
 		var full := dir_path.path_join(name)
 		if d.current_is_dir():
 			if name != ".godot":
-				_walk(full, depth + 1, max_depth, filter, acc)
+				_walk(full, depth + 1, max_depth, filter, files)
 		elif not name.ends_with(".import"):
 			if filter == "" or name.matchn(filter):
-				acc.append(full)
+				files.append(full)
 		name = d.get_next()
 	d.list_dir_end()
 

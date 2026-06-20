@@ -78,3 +78,19 @@ godot-x list_classes --filter Light
 godot-x status                  # daemon? editor/runtime? concurrent_replaces?
 godot-x daemon --keep first     # lock to the first Godot; reject stray instances
 ```
+
+## Large projects (keep output + memory bounded)
+On big codebases/scenes, lean on the streaming + paginated paths so results stay
+bounded (see BENCHMARK §6):
+```
+# reference search: cached index; force a rebuild or cap results
+godot-x find_script_references --script_path res://player.gd --max_results 100
+godot-x find_script_references --script_path res://player.gd --refresh   # rebuild index
+
+# huge scenes: cap the walk / page the tree instead of dumping everything
+godot-x get_scene_tree --max_depth 2
+godot-x analyze_scene_complexity --max_nodes 5000
+
+# huge files: page line windows (never the whole file)
+godot-x read_script --path res://big.gd --offset 0 --limit 400   # then follow next_offset
+```

@@ -33,10 +33,7 @@ func _read_shader(params: Dictionary) -> Dictionary:
 	var path := req_str(params, "path")
 	if not FileAccess.file_exists(path):
 		return fail("Shader not found: %s" % path)
-	var f := FileAccess.open(path, FileAccess.READ)
-	var text := f.get_as_text()
-	f.close()
-	return paginate_lines(path, text, params)
+	return paginate_file_lines(path, params)
 
 
 func _edit_shader(params: Dictionary) -> Dictionary:

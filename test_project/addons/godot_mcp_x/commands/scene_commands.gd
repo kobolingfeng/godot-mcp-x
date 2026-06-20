@@ -23,6 +23,8 @@ func _get_scene_tree(params: Dictionary) -> Dictionary:
 		opt_int(params, "max_depth", -1),
 		opt_bool(params, "include_internal", false),
 		opt_bool(params, "include_properties", false),
+		opt_str(params, "type_filter", ""),
+		opt_int(params, "max_nodes", 0),
 	)
 	return success({"scene": root.scene_file_path, "tree": tree})
 
@@ -94,12 +96,7 @@ func _get_scene_file_content(params: Dictionary) -> Dictionary:
 	var path := req_str(params, "path")
 	if not FileAccess.file_exists(path):
 		return fail("File not found: %s" % path)
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return fail("Cannot open: %s" % path)
-	var text := f.get_as_text()
-	f.close()
-	return paginate_lines(path, text, params)
+	return paginate_file_lines(path, params)
 
 
 func _instance_scene(params: Dictionary) -> Dictionary:

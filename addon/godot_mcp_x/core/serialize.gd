@@ -45,6 +45,8 @@ static func to_json(v: Variant) -> Variant:
 ## and effectively free once warm across calls).
 static var _default_cache: Dictionary = {}
 
+const JSON_SAFE_MAX_DEPTH := 128
+
 
 static func _class_defaults(cls: String) -> Dictionary:
 	if _default_cache.has(cls):
@@ -102,15 +104,91 @@ static func picked_properties(node: Object, names: Array) -> Dictionary:
 	return out
 
 
-static func scene_tree(root: Node, max_depth: int, include_internal: bool, include_props: bool) -> Dictionary:
-	return _node_dict(root, root, 0, max_depth, include_internal, include_props)
+static func scene_tree(root: Node, max_depth: int, include_internal: bool, include_props: bool, type_filter: String = "", max_nodes: int = 0) -> Dictionary:
+	var requested_max_depth := max_depth
+	var effective_max_depth := max_depth
+	var has_auto_depth_budget := false
+	if max_depth < 0 or max_depth > JSON_SAFE_MAX_DEPTH:
+		effective_max_depth = JSON_SAFE_MAX_DEPTH
+		has_auto_depth_budget = true
+	var budget := maxi(0, max_nodes)
+	var truncated := false
+	var depth_truncated := false
+	var frames: Array = []
+	var stack: Array = [{
+		"node": root,
+		"depth": 0,
+		"path": ".",
+		"parent": -1,
+	}]
+	while not stack.is_empty():
+		var item: Dictionary = stack.pop_back()
+		if budget > 0 and frames.size() >= budget:
+			truncated = true
+			break
+		var node: Node = item["node"]
+		var depth := int(item["depth"])
+		var node_path := String(item["path"])
+		var matches_filter := type_filter == "" or node.is_class(type_filter)
+		var frame := {
+			"parent": int(item["parent"]),
+			"entry": _node_entry(root, node, node_path, include_props and matches_filter),
+			"kids": [],
+			"matches": matches_filter,
+		}
+		var frame_idx := frames.size()
+		frames.append(frame)
+		var is_instance := node != root and node.scene_file_path != ""
+		if (effective_max_depth < 0 or depth < effective_max_depth) and (include_internal or not is_instance):
+			var children := node.get_children(include_internal)
+			for i in range(children.size() - 1, -1, -1):
+				if budget > 0 and frames.size() + stack.size() >= budget:
+					truncated = true
+					break
+				var child: Node = children[i]
+				var child_path := String(child.name) if node_path == "." else node_path + "/" + String(child.name)
+				stack.append({
+					"node": child,
+					"depth": depth + 1,
+					"path": child_path,
+					"parent": frame_idx,
+				})
+		elif has_auto_depth_budget and (include_internal or not is_instance) and node.get_child_count(include_internal) > 0:
+			depth_truncated = true
+	var out: Dictionary = {}
+	for i in range(frames.size() - 1, -1, -1):
+		var frame: Dictionary = frames[i]
+		var kids: Array = frame["kids"]
+		var include_node := bool(frame["matches"]) or type_filter == "" or not kids.is_empty()
+		if not include_node:
+			continue
+		var entry: Dictionary = frame["entry"]
+		if not kids.is_empty():
+			kids.reverse()
+			entry["children"] = kids
+		var parent_idx := int(frame["parent"])
+		if parent_idx >= 0:
+			var parent_kids: Array = frames[parent_idx]["kids"]
+			parent_kids.append(entry)
+		else:
+			out = entry
+	if out.is_empty():
+		out = {"name": String(root.name), "type": root.get_class(), "path": ".", "filtered": true}
+	if truncated:
+		out["truncated"] = true
+		out["node_budget"] = max_nodes
+	if depth_truncated:
+		out["depth_truncated"] = true
+		out["depth_budget"] = effective_max_depth
+		out["requested_max_depth"] = requested_max_depth
+	return out
 
 
-static func _node_dict(root: Node, node: Node, depth: int, max_depth: int, include_internal: bool, include_props: bool) -> Dictionary:
+static func _node_entry(root: Node, node: Node, node_path: String, include_props: bool) -> Dictionary:
 	var d: Dictionary = {
 		"name": String(node.name),
 		"type": node.get_class(),
-		"path": "." if node == root else String(root.get_path_to(node)),
+		"path": node_path,
 	}
 	var scr: Variant = node.get_script()
 	if scr != null and scr is Resource and (scr as Resource).resource_path != "":
@@ -131,13 +209,6 @@ static func _node_dict(root: Node, node: Node, depth: int, max_depth: int, inclu
 				g.append(gs)
 		if not g.is_empty():
 			d["groups"] = g
-	# Collapse instanced sub-scenes (like the Scene dock) unless asked otherwise.
-	if (max_depth < 0 or depth < max_depth) and (include_internal or not is_instance):
-		var kids: Array = []
-		for child in node.get_children(include_internal):
-			kids.append(_node_dict(root, child, depth + 1, max_depth, include_internal, include_props))
-		if not kids.is_empty():
-			d["children"] = kids
 	return d
 
 

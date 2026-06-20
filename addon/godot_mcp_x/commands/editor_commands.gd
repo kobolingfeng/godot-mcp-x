@@ -105,10 +105,13 @@ func _get_editor_errors(params: Dictionary) -> Dictionary:
 	if errors.is_empty() and FileAccess.file_exists("user://logs/godot.log"):
 		var f := FileAccess.open("user://logs/godot.log", FileAccess.READ)
 		if f:
-			var lines := f.get_as_text().split("\n")
+			var lines: Array = []
+			while not f.eof_reached():
+				if lines.size() >= max_lines:
+					lines.pop_front()
+				lines.append(f.get_line())
 			f.close()
-			var start := maxi(0, lines.size() - max_lines)
-			for i in range(start, lines.size()):
+			for i in range(lines.size()):
 				if lines[i].contains("ERROR"):
 					errors.append(lines[i].strip_edges())
 

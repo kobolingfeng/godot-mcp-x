@@ -18,12 +18,7 @@ func _read_script(params: Dictionary) -> Dictionary:
 	var path := req_str(params, "path")
 	if not FileAccess.file_exists(path):
 		return fail("Script not found: %s" % path)
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return fail("Cannot open: %s" % path)
-	var text := f.get_as_text()
-	f.close()
-	return paginate_lines(path, text, params)
+	return paginate_file_lines(path, params)
 
 
 func _create_script(params: Dictionary) -> Dictionary:
@@ -120,22 +115,12 @@ func _validate_script(params: Dictionary) -> Dictionary:
 
 func _list_scripts(params: Dictionary) -> Dictionary:
 	var root := opt_str(params, "path", "res://")
-	var files: Array = []
-	_walk_gd(root, files)
-	files.sort()
-	var total := files.size()
-	var offset := opt_int(params, "offset", 0)
-	var limit := opt_int(params, "limit", 300)
-	return success({
-		"total": total,
-		"offset": offset,
-		"limit": limit,
-		"has_more": offset + limit < total,
-		"scripts": files.slice(offset, offset + limit),
-	})
+	var scripts: Array = []
+	_walk_gd(root, scripts)
+	return success(sorted_items_result(scripts, params, 300, "scripts"))
 
 
-func _walk_gd(dir_path: String, acc: Array) -> void:
+func _walk_gd(dir_path: String, scripts: Array) -> void:
 	var d := DirAccess.open(dir_path)
 	if d == null:
 		return
@@ -148,8 +133,8 @@ func _walk_gd(dir_path: String, acc: Array) -> void:
 		var full := dir_path.path_join(name)
 		if d.current_is_dir():
 			if name != ".godot":
-				_walk_gd(full, acc)
+				_walk_gd(full, scripts)
 		elif name.ends_with(".gd"):
-			acc.append(full)
+			scripts.append(full)
 		name = d.get_next()
 	d.list_dir_end()

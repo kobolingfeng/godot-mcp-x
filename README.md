@@ -13,13 +13,13 @@ development. Clean-room core + battle-tested command logic, designed from day on
 around the two things that actually matter for an AI agent: **fast, small,
 correct responses** and **comprehensive editor + runtime control**.
 
-> Status: **feature-complete & validated end-to-end** — **161 tools across 27
+> Status: **feature-complete & validated end-to-end** — **163 tools across 27
 > groups**: project, scene, node, script, editor, analysis, resource, filesystem, ui,
 > input map, animation, animation tree, physics, navigation, 3D builders, gridmap,
 > skeleton, shader, particle, audio, tilemap, theme, batch, profiling, export, a
 > full **runtime** (live in-game) channel, and **automated gameplay testing**
 > (assertions, scenarios, monitors). Proven against a live 4.7-stable build
-> (**167/167 round-trip calls green**, plus **13 unit tests** for the efficiency core).
+> (**167/167 round-trip calls green**, plus **23 unit tests** incl. an MCP-stdio smoke test).
 
 ## Why this exists (vs. godot-mcp-pro)
 
@@ -138,18 +138,18 @@ runtime — use `--import`.
 
 ## Tool modes (shrink context)
 
-The full server registers 161 tools, and the tool list itself costs context. For
+The full server registers 163 tools, and the tool list itself costs context. For
 a focused session, load only the groups you need via `--mode` (or env
 `GODOT_MCP_X_MODE`), plus `--tools` / `--exclude`:
 
 | mode | tools | groups |
 |---|--:|---|
-| `full` (default) | 161 | everything |
-| `minimal` | 47 | project, scene, node, script, editor |
-| `3d` | 144 | common + physics, navigation, node3d, shader, particle, audio, animation_tree, gridmap, skeleton |
-| `2d` | 114 | common + physics, tilemap, theme |
-| `ui` | 76 | minimal + resource, theme, batch, runtime, ui |
-| `test` | 70 | minimal + runtime, testing, profiling |
+| `full` (default) | 163 | everything |
+| `minimal` | 48 | project, scene, node, script, editor |
+| `3d` | 146 | common + physics, navigation, node3d, shader, particle, audio, animation_tree, gridmap, skeleton |
+| `2d` | 116 | common + physics, tilemap, theme |
+| `ui` | 78 | minimal + resource, theme, batch, runtime, ui |
+| `test` | 72 | minimal + runtime, testing, profiling |
 
 (common = minimal + analysis, resource, filesystem, ui, input, animation, batch, runtime, testing)
 
@@ -162,17 +162,18 @@ a focused session, load only the groups you need via `--mode` (or env
 Or pick groups explicitly: `--tools project,scene,node,shader` / `--exclude export,profiling`.
 Preview any mode: `node build/cli.js list --mode 3d`.
 
-## Tools (current — 161)
+## Tools (current — 163)
 
 - **project** (9): `get_project_info`, `get_project_settings`,
   `set_project_setting`, `get_filesystem_tree`, `list_autoloads`,
   `add_autoload`, `remove_autoload`, `uid_to_path`, `path_to_uid`
 - **scene** (7): `get_scene_tree`, `get_current_scene`, `open_scene`,
   `save_scene`, `create_scene`, `get_scene_file_content`, `instance_scene`
-- **node** (13): `add_node`, `delete_node`, `rename_node`, `move_node`,
+- **node** (14): `add_node`, `delete_node`, `rename_node`, `move_node`,
   `duplicate_node`, `get_node_properties`, `set_node_property`,
   `set_node_properties`, `get_node_signals`, `connect_signal`,
-  `set_node_groups`, `find_nodes`, `call_node_method`
+  `set_node_groups`, `find_nodes`, `call_node_method`,
+  `build_tree` (declarative subtree in one undoable call — inline resources + signals)
 - **script** (7): `read_script`, `create_script`, `write_script`, `edit_script`,
   `attach_script`, `validate_script`, `list_scripts`
 - **editor** (11): `execute_editor_script`, `get_editor_errors`,
@@ -191,11 +192,11 @@ Preview any mode: `node build/cli.js list --mode 3d`.
   `set_collision_layers`, `get_collision_info`, `setup_collision_shape`
 - **3D** (5): `add_mesh_instance`, `setup_light` (directional/omni/spot/**area** = 4.7 AreaLight3D),
   `setup_camera`, `set_material`, `setup_environment`
-- **runtime** (14): `play_scene`, `stop_scene`, `is_game_running`,
+- **runtime** (15): `play_scene`, `stop_scene`, `is_game_running`,
   `get_game_info`, `get_game_scene_tree`, `get_game_node_properties`,
   `set_game_node_property`, `execute_game_script`, `get_game_screenshot`,
-  `simulate_action`, `simulate_key`, `get_autoload`, `find_game_nodes`,
-  `call_game_method`
+  `reload_game_script`, `simulate_action`, `simulate_key`, `get_autoload`,
+  `find_game_nodes`, `call_game_method`
   — the in-game tools dial in over a **direct WebSocket** (no file polling);
   call `play_scene` first.
 - **shader** (6): `create_shader`, `read_shader`, `edit_shader`, `assign_shader`,
@@ -250,6 +251,10 @@ Preview any mode: `node build/cli.js list --mode 3d`.
 - [ ] Optional remaining: android deploy (needs Android SDK + export templates)
 - [x] Benchmark quantifying token wins vs. the original — see [BENCHMARK.md](BENCHMARK.md)
       (scene-tree output **−80%** on a real 137-node scene)
+- [x] Large-project scaling: streaming search, cached + background-preheated
+      `find_script_references` index, iterative scene traversal (`max_nodes`),
+      unified pagination — see BENCHMARK §6 (find-refs ~1.9× faster, bounded
+      memory/output on a 7,700-file / 8,000-node stress project)
 
 ## Knowledge base
 

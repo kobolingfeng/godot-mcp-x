@@ -76,17 +76,22 @@ func _used(params: Dictionary) -> Dictionary:
 	var gm := _gm(req_str(params, "path"))
 	if gm == null:
 		return fail("GridMap not found")
+	var used := gm.get_used_cells()
+	var total := used.size()
+	var offset := clampi(opt_int(params, "offset", 0), 0, total)
+	var limit := maxi(1, opt_int(params, "limit", 500))
+	var end := mini(offset + limit, total)
 	var cells: Array = []
-	for c in gm.get_used_cells():
+	for i in range(offset, end):
+		var c: Vector3i = used[i]
 		cells.append([c.x, c.y, c.z])
-	var offset := opt_int(params, "offset", 0)
-	var limit := opt_int(params, "limit", 500)
 	return success({
-		"total": cells.size(),
+		"total": total,
 		"offset": offset,
 		"limit": limit,
-		"has_more": offset + limit < cells.size(),
-		"cells": cells.slice(offset, offset + limit),
+		"has_more": end < total,
+		"next_offset": end if end < total else null,
+		"cells": cells,
 	})
 
 

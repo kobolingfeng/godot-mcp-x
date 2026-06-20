@@ -41,6 +41,8 @@ export const runtimeTools: ToolDef[] = [
       max_depth: z.number().int().optional(),
       include_internal: z.boolean().optional(),
       include_properties: z.boolean().optional(),
+      type_filter: z.string().optional().describe("Only include nodes of this class"),
+      max_nodes: z.number().int().optional().describe("Stop walking after this many visited nodes"),
     },
     handler: runtimePassthrough("get_game_scene_tree"),
   }),

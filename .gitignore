@@ -17,3 +17,7 @@ Thumbs.db
 # MCP working files
 **/mcp_*_request.json
 **/mcp_*_response.json
+
+# Stress-test / codex scratch
+.codex/
+stress_mcp_x/

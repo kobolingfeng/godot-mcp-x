@@ -12,6 +12,7 @@ export const sceneTools: ToolDef[] = [
       include_internal: z.boolean().optional().describe("Include editor-owned/internal children (default false)"),
       include_properties: z.boolean().optional().describe("Attach changed (non-default) properties per node (default false)"),
       type_filter: z.string().optional().describe("Only include nodes of this class (e.g. 'Light3D')"),
+      max_nodes: z.number().int().optional().describe("Stop walking after this many visited nodes (default unlimited)"),
     },
     handler: passthrough("get_scene_tree"),
   }),

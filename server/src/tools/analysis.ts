@@ -28,7 +28,11 @@ export const analysisTools: ToolDef[] = [
   tool({
     name: "find_script_references",
     description: "Find where a script is referenced across the project (by path and uid).",
-    schema: { script_path: z.string().describe("res:// path to the .gd") },
+    schema: {
+      script_path: z.string().describe("res:// path to the .gd"),
+      max_results: z.number().int().optional().describe("Maximum references to return (default 200)"),
+      refresh: z.boolean().optional().describe("Force rebuilding the reference index"),
+    },
     handler: passthrough("find_script_references"),
   }),
   tool({

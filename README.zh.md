@@ -11,12 +11,12 @@
 检验的命令逻辑,从第一天就围绕 AI agent 真正在意的两件事来设计:**又快又小又正确的
 响应**,以及**全面的编辑器 + 运行时控制**。
 
-> 状态:**功能完整、端到端验证** —— **161 个工具 / 27 组**:project、scene、node、
+> 状态:**功能完整、端到端验证** —— **163 个工具 / 27 组**:project、scene、node、
 > script、editor、analysis、resource、filesystem、ui、input map、animation、
 > animation tree、physics、navigation、3D 构建、gridmap、skeleton、shader、particle、
 > audio、tilemap、theme、batch、profiling、export,以及完整的 **runtime**(游戏内
 > 实时)通道和**自动化玩法测试**(断言、场景、监视)。已在真实 4.7-stable 上验证
-> (**167/167 次往返调用通过**,外加效率内核的 **13 个单元测试**)。
+> (**167/167 次往返调用通过**,外加 **23 个单元测试**(含 MCP stdio 冒烟测试))。
 
 ## 为什么要做它(对比 godot-mcp-pro)
 
@@ -125,17 +125,17 @@ node build/cli.js stop-daemon
 
 ## 工具模式(压缩上下文)
 
-完整服务器注册 161 个工具,工具列表本身也耗上下文。聚焦会话时,用 `--mode`(或环境
+完整服务器注册 163 个工具,工具列表本身也耗上下文。聚焦会话时,用 `--mode`(或环境
 变量 `GODOT_MCP_X_MODE`)只加载需要的组,另有 `--tools` / `--exclude`:
 
 | 模式 | 工具数 | 组 |
 |---|--:|---|
-| `full`(默认) | 161 | 全部 |
-| `minimal` | 47 | project、scene、node、script、editor |
-| `3d` | 144 | common + physics、navigation、node3d、shader、particle、audio、animation_tree、gridmap、skeleton |
-| `2d` | 114 | common + physics、tilemap、theme |
-| `ui` | 76 | minimal + resource、theme、batch、runtime、ui |
-| `test` | 70 | minimal + runtime、testing、profiling |
+| `full`(默认) | 163 | 全部 |
+| `minimal` | 48 | project、scene、node、script、editor |
+| `3d` | 146 | common + physics、navigation、node3d、shader、particle、audio、animation_tree、gridmap、skeleton |
+| `2d` | 116 | common + physics、tilemap、theme |
+| `ui` | 78 | minimal + resource、theme、batch、runtime、ui |
+| `test` | 72 | minimal + runtime、testing、profiling |
 
 (common = minimal + analysis、resource、filesystem、ui、input、animation、batch、runtime、testing)
 
@@ -148,11 +148,11 @@ node build/cli.js stop-daemon
 或显式选组:`--tools project,scene,node,shader` / `--exclude export,profiling`。
 预览任意模式:`node build/cli.js list --mode 3d`。
 
-## 工具一览(当前 161;工具名为代码标识,保持英文)
+## 工具一览(当前 163;工具名为代码标识,保持英文)
 
 - **project**(9):`get_project_info`、`get_project_settings`、`set_project_setting`、`get_filesystem_tree`、`list_autoloads`、`add_autoload`、`remove_autoload`、`uid_to_path`、`path_to_uid`
 - **scene**(7):`get_scene_tree`、`get_current_scene`、`open_scene`、`save_scene`、`create_scene`、`get_scene_file_content`、`instance_scene`
-- **node**(13):`add_node`、`delete_node`、`rename_node`、`move_node`、`duplicate_node`、`get_node_properties`、`set_node_property`、`set_node_properties`、`get_node_signals`、`connect_signal`、`set_node_groups`、`find_nodes`、`call_node_method`、`build_tree`(一次可撤销地建整棵子树,支持内联资源 `{"_res":...}` 与信号)
+- **node**(14):`add_node`、`delete_node`、`rename_node`、`move_node`、`duplicate_node`、`get_node_properties`、`set_node_property`、`set_node_properties`、`get_node_signals`、`connect_signal`、`set_node_groups`、`find_nodes`、`call_node_method`、`build_tree`(一次可撤销地建整棵子树,支持内联资源 `{"_res":...}` 与信号)
 - **script**(7):`read_script`、`create_script`、`write_script`、`edit_script`、`attach_script`、`validate_script`、`list_scripts`
 - **editor**(11):`execute_editor_script`、`get_editor_errors`、`get_output_log`、`clear_output`、`get_editor_screenshot`、`reload_scripts`、`list_classes`、`describe_class`、`undo`、`redo`、`get_status`
 - **analysis**(5):`search_files`、`search_in_files`、`find_script_references`、`get_scene_dependencies`、`analyze_scene_complexity`

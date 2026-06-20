@@ -60,6 +60,25 @@ Measured on the 137-node demo scene (25 distinct classes):
 | Cached per class (new) | 3,864 µs |
 | **Speedup** | **~4×** — and effectively free once the cache is warm across calls |
 
+## 6. Large-project scaling (stress test)
+
+A synthetic stress project — **7,700 files / 3,045 scripts**, plus a **1,200-node**
+deep scene and an **8,000-node** wide scene — comparing the original strategy
+("old") against the streaming / indexed / paginated path ("new"):
+
+| Operation | old | new |
+|---|--|--|
+| `find_script_references` (whole project) | 9,194 files read · **1,762 ms** | 4,597 files · **905 ms** (~**1.9×**, half the I/O) — plus a cached, FS-invalidated, **background-preheated** index that makes repeat lookups far cheaper |
+| Page a **220K-line / 13.4 MB** script | buffers **13.4 MB** in RAM | **stream mode buffers 0 chars** |
+| First page of a **7,700-entry** file list | builds all **7,700** in memory | buffers only the **500** returned |
+| `get_scene_tree` on a **1,200-node** scene | **944 KB** | `max_nodes`/cap → **40 KB** (~95% smaller) |
+
+The tradeoff is deliberate: on tiny inputs the streaming/paginated path costs a
+few extra ms of bookkeeping, but output and memory stay **bounded** — the tool
+never blows the token budget or RAM on a real, large project. Deep-scene
+traversal is also **iterative** (no recursion-depth limit). Reproduce with the
+stress harness under `.codex/` (gitignored scratch).
+
 ## Method
 
 The path & property numbers were produced by running both strategies

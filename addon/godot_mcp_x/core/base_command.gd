@@ -5,6 +5,7 @@ extends Node
 ## Subclasses override get_commands() → { "method_name": Callable }.
 
 const Serialize := preload("res://addons/godot_mcp_x/core/serialize.gd")
+const FULL_READ_LINE_PAGE_MAX_BYTES := 32 * 1024 * 1024
 
 var editor_plugin: EditorPlugin
 
@@ -222,9 +223,12 @@ func node_path_suggestions(path: String) -> Array:
 	var root := edited_root()
 	if root == null:
 		return []
-	var paths: Array = []
-	_collect_paths(root, root, paths)
-	return suggest(path, paths)
+	var best: Array = []
+	_collect_path_suggestions(root, root, path.to_lower(), best)
+	var out: Array = []
+	for item in best:
+		out.append(item.get("n", ""))
+	return out
 
 
 func _collect_paths(root: Node, node: Node, acc: Array) -> void:
@@ -234,9 +238,165 @@ func _collect_paths(root: Node, node: Node, acc: Array) -> void:
 		_collect_paths(root, c, acc)
 
 
+func _collect_path_suggestions(root: Node, node: Node, target: String, best: Array) -> void:
+	if node != root:
+		_add_suggestion(best, target, String(root.get_path_to(node)))
+	for c in node.get_children():
+		_collect_path_suggestions(root, c, target, best)
+
+
+func _add_suggestion(best: Array, target: String, candidate: String) -> void:
+	var score := target.similarity(candidate.to_lower())
+	if score < 0.45:
+		return
+	var at := 0
+	while at < best.size() and float(best[at].get("s", 0.0)) >= score:
+		at += 1
+	best.insert(at, {"n": candidate, "s": score})
+	if best.size() > 3:
+		best.resize(3)
+
+
 ## Standard "node not found" failure, with did-you-mean path suggestions.
 func fail_no_node(path: String) -> Dictionary:
 	return fail("Node not found: %s" % path, -32000, {"suggestions": node_path_suggestions(path)})
+
+
+func page_state(params: Dictionary, default_limit: int) -> Dictionary:
+	var offset := maxi(0, opt_int(params, "offset", 0))
+	var limit := maxi(1, opt_int(params, "limit", default_limit))
+	var cap := offset + limit
+	return {
+		"offset": offset,
+		"limit": limit,
+		"total": 0,
+		"items": [],
+		"sorted": false,
+		"collect_limit": maxi(cap, 20000),
+	}
+
+
+func page_add(page: Dictionary, item: Variant) -> void:
+	var total := int(page["total"])
+	var offset := int(page["offset"])
+	var limit := int(page["limit"])
+	var items: Array = page["items"]
+	if total >= offset and items.size() < limit:
+		items.append(item)
+	page["total"] = total + 1
+
+
+func page_result(page: Dictionary, items_key: String) -> Dictionary:
+	var total := int(page["total"])
+	var offset := int(page["offset"])
+	var limit := int(page["limit"])
+	var next := offset + limit
+	var result := {
+		"total": total,
+		"offset": offset,
+		"limit": limit,
+		"has_more": next < total,
+		"next_offset": next if next < total else null,
+	}
+	result[items_key] = page["items"]
+	return result
+
+
+func sorted_page_add(page: Dictionary, item: String) -> void:
+	page["total"] = int(page["total"]) + 1
+	var cap := int(page["offset"]) + int(page["limit"])
+	var collect_limit := maxi(cap, int(page.get("collect_limit", cap)))
+	var items: Array = page["items"]
+	if not bool(page.get("sorted", false)) and items.size() < collect_limit:
+		items.append(item)
+		return
+	if not bool(page.get("sorted", false)):
+		items.sort()
+		if items.size() > cap:
+			items.resize(cap)
+		page["sorted"] = true
+	if items.size() == cap and item >= String(items[items.size() - 1]):
+		return
+	var at := 0
+	while at < items.size() and String(items[at]) <= item:
+		at += 1
+	items.insert(at, item)
+	if items.size() > cap:
+		items.resize(cap)
+
+
+func sorted_page_result(page: Dictionary, items_key: String) -> Dictionary:
+	var total := int(page["total"])
+	var offset := int(page["offset"])
+	var limit := int(page["limit"])
+	var next := offset + limit
+	var items: Array = page["items"]
+	if not bool(page.get("sorted", false)):
+		items.sort()
+		page["sorted"] = true
+	if items.size() > next:
+		items.resize(next)
+	var start := mini(offset, items.size())
+	var end := mini(next, items.size())
+	var result := {
+		"total": total,
+		"offset": offset,
+		"limit": limit,
+		"has_more": next < total,
+		"next_offset": next if next < total else null,
+	}
+	result[items_key] = items.slice(start, end)
+	return result
+
+
+func sorted_items_result(items: Array, params: Dictionary, default_limit: int, items_key: String) -> Dictionary:
+	items.sort()
+	var total := items.size()
+	var offset := clampi(opt_int(params, "offset", 0), 0, total)
+	var limit := maxi(1, opt_int(params, "limit", default_limit))
+	var next := offset + limit
+	var end := mini(next, total)
+	var result := {
+		"total": total,
+		"offset": offset,
+		"limit": limit,
+		"has_more": next < total,
+		"next_offset": next if next < total else null,
+	}
+	result[items_key] = items.slice(offset, end)
+	return result
+
+
+func paginate_file_lines(path: String, params: Dictionary, default_limit: int = 400) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return fail("Cannot open: %s" % path)
+	if f.get_length() <= FULL_READ_LINE_PAGE_MAX_BYTES:
+		var text := f.get_as_text()
+		f.close()
+		return paginate_lines(path, text, params)
+	var requested_offset := maxi(0, opt_int(params, "offset", 0))
+	var limit := maxi(1, opt_int(params, "limit", default_limit))
+	var requested_end := requested_offset + limit
+	var total := 0
+	var slice: Array = []
+	while not f.eof_reached():
+		var line := f.get_line()
+		if total >= requested_offset and total < requested_end:
+			slice.append(line)
+		total += 1
+	f.close()
+	var offset := mini(requested_offset, total)
+	var next := offset + limit
+	return success({
+		"path": path,
+		"total_lines": total,
+		"offset": offset,
+		"returned": slice.size(),
+		"has_more": next < total,
+		"next_offset": next if next < total else null,
+		"content": "\n".join(slice),
+	})
 
 
 ## Line-paginate a text blob into a success() payload. Shared by read_script and
@@ -245,11 +405,9 @@ func paginate_lines(path: String, text: String, params: Dictionary) -> Dictionar
 	var lines := text.split("\n")
 	var total := lines.size()
 	var offset := clampi(opt_int(params, "offset", 0), 0, total)
-	var limit := opt_int(params, "limit", 400)
+	var limit := maxi(1, opt_int(params, "limit", 400))
 	var end := mini(offset + limit, total)
-	var slice: Array = []
-	for i in range(offset, end):
-		slice.append(lines[i])
+	var slice := lines.slice(offset, end)
 	return success({
 		"path": path,
 		"total_lines": total,
