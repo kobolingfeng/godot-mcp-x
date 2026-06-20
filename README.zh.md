@@ -63,7 +63,7 @@ MCP 服务器只是个轻量 JSON-RPC 代理;真正的性能在于**载荷大小
    npm install
    npm run build
    ```
-2. **安装插件** —— 把 `addon/godot_mcp_x/` 复制到你项目的
+2. **安装插件** —— 把 `addons/godot_mcp_x/` 复制到你项目的
    `res://addons/godot_mcp_x/`,然后在 **项目 → 项目设置 → 插件 → Godot MCP X** 启用。
    (见 [INSTALL.md](INSTALL.md)。)
 3. 在客户端**注册 MCP 服务器**。已附带可直接改的 [.mcp.json](.mcp.json):

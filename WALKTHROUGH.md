@@ -15,7 +15,7 @@ the workflow that built and validated the bundled `vampire_survivors` demo.
 
 ## 1. Install
 
-1. Copy `addon/godot_mcp_x` into your project's `addons/` and enable the
+1. Copy `addons/godot_mcp_x` into your project's `addons/` and enable the
    **godot_mcp_x** plugin (Project ▸ Project Settings ▸ Plugins).
 2. The plugin registers the runtime bridge autoload for you. (Manual:
    `McpXRuntime="*res://addons/godot_mcp_x/runtime/runtime_bridge.gd"`.)

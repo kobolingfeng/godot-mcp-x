@@ -13,7 +13,7 @@ const PLUGIN_PATH = "res://addons/godot_mcp_x/plugin.cfg";
 
 /** Repo addon source — this file is <repo>/server/build/setup.js. */
 function addonSrc(): string {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../addon/godot_mcp_x");
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../addons/godot_mcp_x");
 }
 
 function projGodot(project: string): string {

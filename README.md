@@ -67,7 +67,7 @@ editor. **Ports 6605-6609** are deliberately distinct from godot-mcp-pro's
    npm install
    npm run build
    ```
-2. **Install the addon** — copy `addon/godot_mcp_x/` into your project's
+2. **Install the addon** — copy `addons/godot_mcp_x/` into your project's
    `res://addons/godot_mcp_x/`, then enable **Project → Project Settings →
    Plugins → Godot MCP X**. (See [INSTALL.md](INSTALL.md).)
 3. **Register the MCP server** with your client. A ready-to-edit
