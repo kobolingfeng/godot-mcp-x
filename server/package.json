@@ -1,0 +1,30 @@
+{
+  "name": "godot-mcp-x",
+  "version": "0.1.0",
+  "description": "Next-gen, token-efficient MCP server for AI-powered Godot 4.7 development",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "godot-mcp-x": "build/index.js",
+    "godot-x": "build/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "node build/index.js",
+    "test": "npm run build && vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.2"
+  },
+  "keywords": ["godot", "godot-4.7", "mcp", "ai", "editor", "gamedev"],
+  "license": "MIT"
+}

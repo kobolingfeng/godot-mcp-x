@@ -1,0 +1,19 @@
+# Node / TypeScript
+node_modules/
+server/build/
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Godot
+.godot/
+*.import
+
+# MCP working files
+**/mcp_*_request.json
+**/mcp_*_response.json
