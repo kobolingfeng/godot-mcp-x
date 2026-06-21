@@ -54,12 +54,50 @@ button.custom_minimum_size = Vector2(120, 40)
 
 ## Theming
 
-A `Theme` resource holds colors/constants/fonts/styleboxes keyed by
-`(item_name, control_class)`. Set `Control.theme` to apply to a subtree, or
-per-node overrides via `add_theme_color_override(...)` etc. godot-mcp-x theme
-tools: `create_theme`, `set_theme_color/constant/font_size/stylebox`,
-`apply_theme`. See [03-editor-automation.md](03-editor-automation.md) for the
-inspector-vs-code rule.
+A `Theme` holds items keyed by `(item_name, control_class)` in five buckets:
+**stylebox, color, font, font_size, constant** (icons too). Set `Control.theme` on a
+subtree, or **`get_tree().root.theme`** to skin the WHOLE app from one place (basis of
+a unified design system). godot-mcp-x: `create_theme`, `set_theme_*`, `apply_theme`.
+
+**Build a theme in code (idiomatic — Godot's own editor themes do exactly this).** Keep
+design tokens (colors / spacing / radius / font sizes) as constants, then build items
+from them. Pro idiom: make ONE base `StyleBoxFlat` and `.duplicate()` it per state,
+tweaking only what differs:
+```gdscript
+var base := StyleBoxFlat.new()
+base.bg_color = SURFACE; base.set_corner_radius_all(10); base.set_content_margin_all(12)
+var hover := base.duplicate(); hover.bg_color = SURFACE_HOVER
+theme.set_stylebox("normal", "Button", base)
+theme.set_stylebox("hover",  "Button", hover)
+```
+**Cover every state** or a control looks half-styled. Exact item names per control
+(enumerate, don't guess: `ThemeDB.get_default_theme().get_stylebox_list("Button")`):
+- **Button** sb `normal/hover/pressed/disabled/focus`; col `font_color` + `font_{hover,pressed,focus,hover_pressed,disabled}_color`.
+- **CheckButton** sb `normal/hover/hover_pressed/pressed/disabled/focus`; the on/off switch is an **icon** (`checked`/`unchecked`), not a stylebox.
+- **OptionButton** = Button styleboxes + icon `arrow`; its dropdown is a separate **PopupMenu** (style `panel`,`hover` + its own `font_color`/`font_hover_color`).
+- **HSlider** sb `slider` (track) / `grabber_area` (fill) / `grabber_area_highlight`; the knob is an **icon** (`grabber`/`grabber_highlight`).
+- **TabContainer** sb `tab_selected/tab_hovered/tab_unselected/tab_disabled/tab_focus/panel/tabbar_background`; col `font_{selected,hovered,unselected}_color`.
+- **LineEdit** sb `normal/focus/read_only`; col `font_color/font_placeholder_color/caret_color/selection_color`.
+- **PanelContainer**/**Panel** sb `panel`. Default `default_font_size` = 16.
+
+**Type variations** — reusable named styles (a "Title" Label, a "Danger" Button):
+```gdscript
+theme.set_type_variation("Title", "Label")   # set_type_variation, NOT set_type_variation_base
+theme.set_font_size("font_size", "Title", 30)
+label.theme_type_variation = "Title"          # now resolves to 30
+```
+The setter is **`set_type_variation(variation, base)`** but the getter is
+**`get_type_variation_base(variation)`** — and **`set_type_variation_base` does not
+exist**. WITHOUT registering via `set_type_variation`, `theme_type_variation` silently
+falls back to the control class (your custom size/colour is ignored). For one-off
+sizing, per-node `add_theme_font_size_override(...)` also works.
+
+**Polish idioms:** subtle `StyleBoxFlat.shadow_color/shadow_size/shadow_offset` for
+depth; an opacity ramp for text hierarchy (high 1.0 / medium ~0.7 / low ~0.45); a tonal
+surface ramp derived from one base colour; rounded corners + 1px borders for a modern,
+lightweight look. **Editor vs code:** the visual Theme editor gives live preview (best
+for hand-tuning a `.tres`); code/tokens win for dynamic or design-system themes. See
+[03-editor-automation.md](03-editor-automation.md) for the inspector-vs-code rule.
 
 ## Touch input — VirtualJoystick (4.7 ✅)
 
@@ -92,3 +130,7 @@ selection, conic `GradientTexture2D`.
   `CanvasLayer` for HUDs that float over the game.
 - `mouse_filter` (`STOP`/`PASS`/`IGNORE`) controls whether a Control eats input —
   a full-rect Control with default `STOP` silently blocks clicks beneath it.
+- Theme type variations register with `set_type_variation(variation, base)` (getter is
+  `get_type_variation_base`); **there is no `set_type_variation_base`** — calling it
+  throws and aborts the whole `build_theme()`, leaving the UI unstyled. Verify a
+  code-built theme actually applied with `get_tree().root.theme != null`.
