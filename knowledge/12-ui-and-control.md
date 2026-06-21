@@ -57,7 +57,9 @@ button.custom_minimum_size = Vector2(120, 40)
 A `Theme` holds items keyed by `(item_name, control_class)` in five buckets:
 **stylebox, color, font, font_size, constant** (icons too). Set `Control.theme` on a
 subtree, or **`get_tree().root.theme`** to skin the WHOLE app from one place (basis of
-a unified design system). godot-mcp-x: `create_theme`, `set_theme_*`, `apply_theme`.
+a unified design system). **⚠️ But Controls nested under a `CanvasLayer` do NOT inherit
+the Window/root theme** — set the theme on the *top Control* of that subtree (HUDs, pause
+menus). godot-mcp-x: `create_theme`, `set_theme_*`, `apply_theme`.
 
 **Build a theme in code (idiomatic — Godot's own editor themes do exactly this).** Keep
 design tokens (colors / spacing / radius / font sizes) as constants, then build items
@@ -134,3 +136,7 @@ selection, conic `GradientTexture2D`.
   `get_type_variation_base`); **there is no `set_type_variation_base`** — calling it
   throws and aborts the whole `build_theme()`, leaving the UI unstyled. Verify a
   code-built theme actually applied with `get_tree().root.theme != null`.
+- **`get_tree().root.theme` does NOT reach Controls under a `CanvasLayer`** (HUDs, pause
+  menus) — they silently fall back to the default theme. Assign the theme to that
+  subtree's top Control (`hud_root.theme = my_theme`). Verify a node really resolves
+  your items, e.g. `btn.get_theme_stylebox("normal").bg_color`.
