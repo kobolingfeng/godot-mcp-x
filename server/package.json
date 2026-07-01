@@ -1,6 +1,6 @@
 {
   "name": "godot-mcp-x",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Next-gen, token-efficient MCP server for AI-powered Godot 4.7 development",
   "type": "module",
   "main": "build/index.js",
