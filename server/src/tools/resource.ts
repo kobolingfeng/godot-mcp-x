@@ -17,6 +17,7 @@ export const resourceTools: ToolDef[] = [
     description: "Load a resource and return its changed (non-default) properties; include_defaults for all.",
     schema: {
       path: z.string().describe("res:// path to the resource"),
+      names: z.array(z.string()).optional().describe("Only return these properties"),
       include_defaults: z.boolean().optional().describe("Return every property (default false)"),
     },
     handler: passthrough("read_resource"),

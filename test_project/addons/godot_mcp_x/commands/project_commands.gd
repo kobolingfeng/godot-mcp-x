@@ -92,14 +92,18 @@ func _get_filesystem_tree(params: Dictionary) -> Dictionary:
 	var root := opt_str(params, "path", "res://")
 	var filter := opt_str(params, "filter", "")
 	var max_depth := opt_int(params, "max_depth", 8)
-	var files: Array = []
-	_walk(root, 0, max_depth, filter, files)
-	var result := sorted_items_result(files, params, 500, "files")
+	var sort := opt_bool(params, "sort", true)
+	var sink := sorted_scan_state(params, 500) if sort else page_state(params, 500)
+	if sort:
+		_walk_sorted(root, 0, max_depth, filter, sink)
+	else:
+		_walk_unsorted(root, 0, max_depth, filter, sink)
+	var result := sorted_scan_result(sink, params, 500, "files") if sort else page_result(sink, "files")
 	result["root"] = root
 	return success(result)
 
 
-func _walk(dir_path: String, depth: int, max_depth: int, filter: String, files: Array) -> void:
+func _walk_sorted(dir_path: String, depth: int, max_depth: int, filter: String, sink: Dictionary) -> void:
 	if depth > max_depth:
 		return
 	var d := DirAccess.open(dir_path)
@@ -114,10 +118,40 @@ func _walk(dir_path: String, depth: int, max_depth: int, filter: String, files: 
 		var full := dir_path.path_join(name)
 		if d.current_is_dir():
 			if name != ".godot":
-				_walk(full, depth + 1, max_depth, filter, files)
+				_walk_sorted(full, depth + 1, max_depth, filter, sink)
 		elif not name.ends_with(".import"):
 			if filter == "" or name.matchn(filter):
-				files.append(full)
+				if bool(sink.get("bounded", false)):
+					sorted_scan_add(sink, full)
+				else:
+					var items: Array = sink["items"]
+					if items.size() < SORTED_PAGE_BULK_LIMIT:
+						items.append(full)
+					else:
+						sorted_scan_add(sink, full)
+		name = d.get_next()
+	d.list_dir_end()
+
+
+func _walk_unsorted(dir_path: String, depth: int, max_depth: int, filter: String, sink: Dictionary) -> void:
+	if depth > max_depth:
+		return
+	var d := DirAccess.open(dir_path)
+	if d == null:
+		return
+	d.list_dir_begin()
+	var name := d.get_next()
+	while name != "":
+		if name.begins_with("."):
+			name = d.get_next()
+			continue
+		var full := dir_path.path_join(name)
+		if d.current_is_dir():
+			if name != ".godot":
+				_walk_unsorted(full, depth + 1, max_depth, filter, sink)
+		elif not name.ends_with(".import"):
+			if filter == "" or name.matchn(filter):
+				page_add(sink, full)
 		name = d.get_next()
 	d.list_dir_end()
 

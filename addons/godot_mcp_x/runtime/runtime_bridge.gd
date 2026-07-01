@@ -13,6 +13,8 @@ const MAX_PORT := 6609
 const RECONNECT_INTERVAL := 3.0
 const BUFFER_SIZE := 16 * 1024 * 1024
 const PING_INTERVAL := 5.0
+const PATH_SUGGESTION_NODE_BUDGET := 5000
+const SNIPPET_CACHE_MAX := 128
 
 var _peers: Dictionary = {}
 var _connected: Dictionary = {}
@@ -205,7 +207,8 @@ func _node_path_suggestions(path: String) -> Array:
 	if root == null:
 		return []
 	var best: Array = []
-	_collect_path_suggestions(root, root, path.to_lower(), best)
+	var state := {"visited": 0}
+	_collect_path_suggestions(root, root, path.to_lower(), best, state)
 	var out: Array = []
 	for item in best:
 		out.append(item.get("n", ""))
@@ -219,11 +222,16 @@ func _collect_paths(root: Node, node: Node, acc: Array) -> void:
 		_collect_paths(root, c, acc)
 
 
-func _collect_path_suggestions(root: Node, node: Node, target: String, best: Array) -> void:
+func _collect_path_suggestions(root: Node, node: Node, target: String, best: Array, state: Dictionary) -> void:
+	if int(state.get("visited", 0)) >= PATH_SUGGESTION_NODE_BUDGET:
+		return
+	state["visited"] = int(state.get("visited", 0)) + 1
 	if node != root:
 		_add_suggestion(best, target, String(root.get_path_to(node)))
 	for c in node.get_children():
-		_collect_path_suggestions(root, c, target, best)
+		if int(state.get("visited", 0)) >= PATH_SUGGESTION_NODE_BUDGET:
+			break
+		_collect_path_suggestions(root, c, target, best, state)
 
 
 func _add_suggestion(best: Array, target: String, candidate: String) -> void:
@@ -303,20 +311,25 @@ func _set_game_node_property(params: Dictionary) -> Dictionary:
 	return _ok({"path": _rel(node), "property": prop, "value": Serialize.to_json(node.get(prop))})
 
 
-static var _snippet_cache: Dictionary = {}
+var _snippet_cache: Dictionary = {}
+var _snippet_cache_order: Array = []
 
 
 ## Compile (and cache) a wrapped GDScript snippet — repeated identical calls
 ## (e.g. polling the same state) skip recompilation.
 func _compile(src: String) -> GDScript:
-	var cached: Variant = _snippet_cache.get(src.hash())
+	var key := "%d:%d" % [src.length(), src.hash()]
+	var cached: Variant = _snippet_cache.get(key)
 	if cached is GDScript:
 		return cached
 	var gd := GDScript.new()
 	gd.source_code = src
 	if gd.reload() != OK:
 		return null
-	_snippet_cache[src.hash()] = gd
+	_snippet_cache[key] = gd
+	_snippet_cache_order.append(key)
+	while _snippet_cache_order.size() > SNIPPET_CACHE_MAX:
+		_snippet_cache.erase(_snippet_cache_order.pop_front())
 	return gd
 
 
@@ -538,13 +551,31 @@ func _find_game_nodes(params: Dictionary) -> Dictionary:
 	if root == null:
 		return _fail("No current scene")
 	var matches: Array = []
-	_collect(root, root, str(params.get("type", "")), str(params.get("pattern", "")), str(params.get("group", "")), matches, int(params.get("limit", 200)))
-	return _ok({"count": matches.size(), "nodes": matches})
+	var offset := maxi(0, int(params.get("offset", 0)))
+	var limit := maxi(1, int(params.get("limit", 200)))
+	var max_nodes := maxi(0, int(params.get("max_nodes", 0)))
+	var state := {"visited": 0, "matched": 0, "has_more": false, "truncated": false}
+	_collect(root, root, str(params.get("type", "")), str(params.get("pattern", "")), str(params.get("group", "")), matches, offset, limit, max_nodes, state)
+	return _ok({
+		"count": matches.size(),
+		"matched": int(state.get("matched", 0)),
+		"offset": offset,
+		"limit": limit,
+		"has_more": bool(state.get("has_more", false)),
+		"next_offset": offset + limit if bool(state.get("has_more", false)) else null,
+		"visited": int(state.get("visited", 0)),
+		"truncated": bool(state.get("truncated", false)),
+		"nodes": matches,
+	})
 
 
-func _collect(root: Node, node: Node, type: String, pattern: String, group: String, acc: Array, limit: int) -> void:
-	if acc.size() >= limit:
+func _collect(root: Node, node: Node, type: String, pattern: String, group: String, acc: Array, offset: int, limit: int, max_nodes: int, state: Dictionary) -> void:
+	if bool(state.get("has_more", false)) or bool(state.get("truncated", false)):
 		return
+	if max_nodes > 0 and int(state.get("visited", 0)) >= max_nodes:
+		state["truncated"] = true
+		return
+	state["visited"] = int(state.get("visited", 0)) + 1
 	var ok := true
 	if type != "" and not node.is_class(type):
 		ok = false
@@ -553,13 +584,23 @@ func _collect(root: Node, node: Node, type: String, pattern: String, group: Stri
 	if ok and group != "" and not node.is_in_group(group):
 		ok = false
 	if ok:
-		acc.append({
-			"path": "." if node == root else String(root.get_path_to(node)),
-			"type": node.get_class(),
-			"name": String(node.name),
-		})
+		var matched := int(state.get("matched", 0))
+		state["matched"] = matched + 1
+		if matched < offset:
+			pass
+		elif acc.size() < limit:
+			acc.append({
+				"path": "." if node == root else String(root.get_path_to(node)),
+				"type": node.get_class(),
+				"name": String(node.name),
+			})
+		else:
+			state["has_more"] = true
+			return
 	for c in node.get_children():
-		_collect(root, c, type, pattern, group, acc, limit)
+		if bool(state.get("has_more", false)) or bool(state.get("truncated", false)):
+			break
+		_collect(root, c, type, pattern, group, acc, offset, limit, max_nodes, state)
 
 
 # ---------- testing / assertions ----------

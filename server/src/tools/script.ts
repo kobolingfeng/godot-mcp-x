@@ -68,6 +68,7 @@ export const scriptTools: ToolDef[] = [
       path: z.string().optional().describe("Root to scan (default res://)"),
       offset: z.number().int().optional(),
       limit: z.number().int().optional().describe("Max results (default 300)"),
+      sort: z.boolean().optional().describe("Sort paths before paging (default true). Set false for faster traversal-order pages."),
     },
     handler: passthrough("list_scripts"),
   }),

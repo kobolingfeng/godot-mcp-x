@@ -5,7 +5,9 @@ extends Node
 ## Subclasses override get_commands() → { "method_name": Callable }.
 
 const Serialize := preload("res://addons/godot_mcp_x/core/serialize.gd")
-const FULL_READ_LINE_PAGE_MAX_BYTES := 32 * 1024 * 1024
+const FULL_READ_LINE_PAGE_MAX_BYTES := 2 * 1024 * 1024
+const PATH_SUGGESTION_NODE_BUDGET := 5000
+const SORTED_PAGE_BULK_LIMIT := 20000
 
 var editor_plugin: EditorPlugin
 
@@ -224,7 +226,8 @@ func node_path_suggestions(path: String) -> Array:
 	if root == null:
 		return []
 	var best: Array = []
-	_collect_path_suggestions(root, root, path.to_lower(), best)
+	var state := {"visited": 0}
+	_collect_path_suggestions(root, root, path.to_lower(), best, state)
 	var out: Array = []
 	for item in best:
 		out.append(item.get("n", ""))
@@ -238,11 +241,16 @@ func _collect_paths(root: Node, node: Node, acc: Array) -> void:
 		_collect_paths(root, c, acc)
 
 
-func _collect_path_suggestions(root: Node, node: Node, target: String, best: Array) -> void:
+func _collect_path_suggestions(root: Node, node: Node, target: String, best: Array, state: Dictionary) -> void:
+	if int(state.get("visited", 0)) >= PATH_SUGGESTION_NODE_BUDGET:
+		return
+	state["visited"] = int(state.get("visited", 0)) + 1
 	if node != root:
 		_add_suggestion(best, target, String(root.get_path_to(node)))
 	for c in node.get_children():
-		_collect_path_suggestions(root, c, target, best)
+		if int(state.get("visited", 0)) >= PATH_SUGGESTION_NODE_BUDGET:
+			break
+		_collect_path_suggestions(root, c, target, best, state)
 
 
 func _add_suggestion(best: Array, target: String, candidate: String) -> void:
@@ -365,6 +373,36 @@ func sorted_items_result(items: Array, params: Dictionary, default_limit: int, i
 	}
 	result[items_key] = items.slice(offset, end)
 	return result
+
+
+func sorted_scan_state(params: Dictionary, default_limit: int) -> Dictionary:
+	return {
+		"items": [],
+		"page": page_state(params, default_limit),
+		"bounded": false,
+	}
+
+
+func sorted_scan_add(state: Dictionary, item: String) -> void:
+	if bool(state.get("bounded", false)):
+		sorted_page_add(state["page"], item)
+		return
+	var items: Array = state["items"]
+	if items.size() < SORTED_PAGE_BULK_LIMIT:
+		items.append(item)
+		return
+	var page: Dictionary = state["page"]
+	page["items"] = items
+	page["total"] = items.size()
+	page["sorted"] = false
+	state["bounded"] = true
+	sorted_page_add(page, item)
+
+
+func sorted_scan_result(state: Dictionary, params: Dictionary, default_limit: int, items_key: String) -> Dictionary:
+	if bool(state.get("bounded", false)):
+		return sorted_page_result(state["page"], items_key)
+	return sorted_items_result(state["items"], params, default_limit, items_key)
 
 
 func paginate_file_lines(path: String, params: Dictionary, default_limit: int = 400) -> Dictionary:

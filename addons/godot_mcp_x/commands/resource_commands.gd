@@ -39,7 +39,13 @@ func _read_resource(params: Dictionary) -> Dictionary:
 	var res := load(path)
 	if res == null:
 		return fail("Failed to load: %s" % path)
-	var props := Serialize.all_properties(res) if opt_bool(params, "include_defaults", false) else Serialize.changed_properties(res)
+	var props: Dictionary
+	if has_key(params, "names"):
+		props = Serialize.picked_properties(res, opt_array(params, "names"))
+	elif opt_bool(params, "include_defaults", false):
+		props = Serialize.all_properties(res)
+	else:
+		props = Serialize.changed_properties(res)
 	return success({"path": path, "type": res.get_class(), "properties": props})
 
 

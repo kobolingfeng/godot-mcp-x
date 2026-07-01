@@ -1,6 +1,11 @@
 @tool
 extends "res://addons/godot_mcp_x/core/base_command.gd"
 
+const SNIPPET_CACHE_MAX := 128
+
+var _snippet_cache: Dictionary = {}
+var _snippet_cache_order: Array = []
+
 
 func get_commands() -> Dictionary:
 	return {
@@ -10,6 +15,7 @@ func get_commands() -> Dictionary:
 		"clear_output": _clear_output,
 		"get_editor_screenshot": _get_editor_screenshot,
 		"reload_scripts": _reload_scripts,
+		"reload_mcp_commands": _reload_mcp_commands,
 		"list_classes": _list_classes,
 		"describe_class": _describe_class,
 		"undo": _undo,
@@ -55,11 +61,11 @@ func _execute_editor_script(params: Dictionary) -> Dictionary:
 		+ "\treturn null\n"
 	)
 
-	var gd := GDScript.new()
-	gd.source_code = src
-	var rerr := gd.reload()
-	if rerr != OK:
+	var compiled := _compile_snippet(src)
+	if int(compiled.get("error", OK)) != OK:
+		var rerr := int(compiled.get("error", ERR_PARSE_ERROR))
 		return fail("Script failed to compile (error %d)" % rerr, -32000, {"source": src})
+	var gd: GDScript = compiled.get("script") as GDScript
 
 	var inst: Object = gd.new()
 	var ret: Variant = inst.call("run")
@@ -68,6 +74,23 @@ func _execute_editor_script(params: Dictionary) -> Dictionary:
 
 	var output: Array = inst.get("_mcp_output")
 	return success({"output": output, "return_value": null if ret == null else str(ret)})
+
+
+func _compile_snippet(src: String) -> Dictionary:
+	var key := "%d:%d" % [src.length(), src.hash()]
+	var cached: Variant = _snippet_cache.get(key)
+	if cached is GDScript:
+		return {"script": cached, "error": OK}
+	var gd := GDScript.new()
+	gd.source_code = src
+	var err := gd.reload()
+	if err != OK:
+		return {"script": null, "error": err}
+	_snippet_cache[key] = gd
+	_snippet_cache_order.append(key)
+	while _snippet_cache_order.size() > SNIPPET_CACHE_MAX:
+		_snippet_cache.erase(_snippet_cache_order.pop_front())
+	return {"script": gd, "error": OK}
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +191,15 @@ func _get_editor_screenshot(params: Dictionary) -> Dictionary:
 func _reload_scripts(_params: Dictionary) -> Dictionary:
 	EditorInterface.get_resource_filesystem().scan()
 	return success({"reloaded": true})
+
+
+func _reload_mcp_commands(_params: Dictionary) -> Dictionary:
+	EditorInterface.get_resource_filesystem().scan()
+	var router := editor_plugin.get_node_or_null("McpXRouter")
+	if router == null or not router.has_method("reload_commands"):
+		return fail("McpXRouter is not available")
+	var result: Dictionary = router.reload_commands()
+	return success(result)
 
 
 # ---------------------------------------------------------------------------

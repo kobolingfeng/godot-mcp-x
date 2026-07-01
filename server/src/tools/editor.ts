@@ -43,6 +43,11 @@ export const editorTools: ToolDef[] = [
     handler: passthrough("reload_scripts"),
   }),
   tool({
+    name: "reload_mcp_commands",
+    description: "Reload godot-mcp-x command modules and rebuild the editor command router.",
+    handler: passthrough("reload_mcp_commands"),
+  }),
+  tool({
     name: "list_classes",
     description:
       "Query the live Godot 4.7 ClassDB. Without args returns counts; with a filter returns matching class names. " +

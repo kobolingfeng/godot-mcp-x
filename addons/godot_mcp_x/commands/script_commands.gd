@@ -115,12 +115,16 @@ func _validate_script(params: Dictionary) -> Dictionary:
 
 func _list_scripts(params: Dictionary) -> Dictionary:
 	var root := opt_str(params, "path", "res://")
-	var scripts: Array = []
-	_walk_gd(root, scripts)
-	return success(sorted_items_result(scripts, params, 300, "scripts"))
+	var sort := opt_bool(params, "sort", true)
+	var sink := sorted_scan_state(params, 300) if sort else page_state(params, 300)
+	if sort:
+		_walk_gd_sorted(root, sink)
+	else:
+		_walk_gd_unsorted(root, sink)
+	return success(sorted_scan_result(sink, params, 300, "scripts") if sort else page_result(sink, "scripts"))
 
 
-func _walk_gd(dir_path: String, scripts: Array) -> void:
+func _walk_gd_sorted(dir_path: String, sink: Dictionary) -> void:
 	var d := DirAccess.open(dir_path)
 	if d == null:
 		return
@@ -133,8 +137,35 @@ func _walk_gd(dir_path: String, scripts: Array) -> void:
 		var full := dir_path.path_join(name)
 		if d.current_is_dir():
 			if name != ".godot":
-				_walk_gd(full, scripts)
+				_walk_gd_sorted(full, sink)
 		elif name.ends_with(".gd"):
-			scripts.append(full)
+			if bool(sink.get("bounded", false)):
+				sorted_scan_add(sink, full)
+			else:
+				var items: Array = sink["items"]
+				if items.size() < SORTED_PAGE_BULK_LIMIT:
+					items.append(full)
+				else:
+					sorted_scan_add(sink, full)
+		name = d.get_next()
+	d.list_dir_end()
+
+
+func _walk_gd_unsorted(dir_path: String, sink: Dictionary) -> void:
+	var d := DirAccess.open(dir_path)
+	if d == null:
+		return
+	d.list_dir_begin()
+	var name := d.get_next()
+	while name != "":
+		if name.begins_with("."):
+			name = d.get_next()
+			continue
+		var full := dir_path.path_join(name)
+		if d.current_is_dir():
+			if name != ".godot":
+				_walk_gd_unsorted(full, sink)
+		elif name.ends_with(".gd"):
+			page_add(sink, full)
 		name = d.get_next()
 	d.list_dir_end()

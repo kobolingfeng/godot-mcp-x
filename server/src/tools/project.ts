@@ -34,6 +34,7 @@ export const projectTools: ToolDef[] = [
       max_depth: z.number().int().optional().describe("Max depth (default 8)"),
       offset: z.number().int().optional().describe("Pagination offset over flattened entries"),
       limit: z.number().int().optional().describe("Max entries (default 500)"),
+      sort: z.boolean().optional().describe("Sort paths before paging (default true). Set false for faster traversal-order pages."),
     },
     handler: passthrough("get_filesystem_tree"),
   }),

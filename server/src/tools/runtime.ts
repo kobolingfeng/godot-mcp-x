@@ -116,12 +116,14 @@ export const runtimeTools: ToolDef[] = [
   }),
   tool({
     name: "find_game_nodes",
-    description: "Find live nodes in the running game by type/name/group.",
+    description: "Find live nodes in the running game by type/name/group. Paginates without walking past the next page when possible.",
     schema: {
       type: z.string().optional(),
       pattern: z.string().optional().describe("Name glob"),
       group: z.string().optional(),
+      offset: z.number().int().optional().describe("Result offset (default 0)"),
       limit: z.number().int().optional(),
+      max_nodes: z.number().int().optional().describe("Optional traversal budget; returns truncated=true if reached"),
     },
     handler: runtimePassthrough("find_game_nodes"),
   }),
